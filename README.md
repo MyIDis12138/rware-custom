@@ -143,7 +143,7 @@ env = gym.make("rware-tiny-2ag-v1")
 You can even bypass the `import` statement with Gym, and directly use:
 ```python
 import gym
-env = gym.make("rware:rware-tiny-2ag-v1")
+env = gym.make("rware:rware-tiny-3ag-v1")
 ```
 The `rware:` in the beginning of the environment name tells Gym to import the respective package.
 
