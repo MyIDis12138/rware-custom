@@ -5,6 +5,7 @@ import gym
 from gym import spaces
 
 from rware.utils import MultiAgentActionSpace, MultiAgentObservationSpace
+from rware.utils.utils import transform_Pwalls
 
 from enum import Enum
 import numpy as np
@@ -17,11 +18,11 @@ _AXIS_Z = 0
 _AXIS_Y = 1
 _AXIS_X = 2
 
-_COLLISION_LAYERS = 2
+_COLLISION_LAYERS = 3
 
 _LAYER_AGENTS = 0
 _LAYER_SHELFS = 1
-
+_LAYER_WALL = 2
 
 class _VectorWriter:
     def __init__(self, size: int):
@@ -62,6 +63,7 @@ class ObserationType(Enum):
     DICT = 0
     FLATTENED = 1
     IMAGE = 2
+
 
 class ImageLayer(Enum):
     """
@@ -216,7 +218,7 @@ class Warehouse(gym.Env):
         :param sensor_range: Range of each agents observation
         :type sensor_range: int
         :param request_queue_size: How many shelfs are simultaneously requested
-        :type request_queue_size: int
+        :type request_queue_size: intself.goals
         :param max_inactivity: Number of steps without a delivered shelf until environment finishes
         :type max_inactivity: Optional[int]
         :param reward_type: Specifies if agents are rewarded individually or globally
@@ -236,6 +238,8 @@ class Warehouse(gym.Env):
         """
 
         self.goals: List[Tuple[int, int]] = []
+        self.walls: List[Tuple[int, int]] = []
+        self.shelfs_init_pos: List[Tuple[int, int]] =[]
 
         if not layout:
             self._make_layout_from_params(shelf_columns, shelf_rows, column_height)
@@ -329,12 +333,16 @@ class Warehouse(gym.Env):
 
         for y, line in enumerate(lines):
             for x, char in enumerate(line):
-                assert char.lower() in "gx."
+                assert char.lower() in "gwx."
                 if char.lower() == "g":
-                    self.goals.append((x, y))
+                    self.goals.append((y, x))
                     self.highways[y, x] = 1
                 elif char.lower() == ".":
                     self.highways[y, x] = 1
+                elif char.lower() == "w":
+                    self.walls.append((y,x))
+                elif char.lower() == "x":
+                    self.shelfs_init_pos.append((y,x))
 
         assert len(self.goals) >= 1, "At least one goal is required"
 
@@ -428,6 +436,7 @@ class Warehouse(gym.Env):
                                                     "local_message": spaces.MultiBinary(
                                                         self.msg_bits
                                                     ),
+                                                    "has_wall": spaces.MultiBinary(1),
                                                     "has_shelf": spaces.MultiBinary(1),
                                                     "shelf_requested": spaces.MultiBinary(
                                                         1
@@ -558,6 +567,9 @@ class Warehouse(gym.Env):
             padded_shelfs = np.pad(
                 self.grid[_LAYER_SHELFS], self.sensor_range, mode="constant"
             )
+            padded_walls = np.pad(
+                self.grid[_LAYER_WALL], self.sensor_range, mode='constant'
+            )
             # + self.sensor_range due to padding
             min_x += self.sensor_range
             max_x += self.sensor_range
@@ -567,9 +579,11 @@ class Warehouse(gym.Env):
         else:
             padded_agents = self.grid[_LAYER_AGENTS]
             padded_shelfs = self.grid[_LAYER_SHELFS]
+            padded_walls = self.grid[_LAYER_WALL]
 
         agents = padded_agents[min_y:max_y, min_x:max_x].reshape(-1)
         shelfs = padded_shelfs[min_y:max_y, min_x:max_x].reshape(-1)
+        walls = padded_walls[min_y:max_y, min_x:max_x].reshape(-1)
 
         if self.fast_obs:
             # write flattened observations
@@ -649,6 +663,13 @@ class Warehouse(gym.Env):
                     int(self.shelfs[id_ - 1] in self.request_queue)
                 ]
 
+        # find neighboring walls:
+        for i, id_ in enumerate(walls):
+            if id_ == 0:
+                obs["sensors"][i]["has_wall"] = [0]
+            else:
+                obs["sensors"][i]["has_wall"] = [1]
+
         return obs
 
     def _recalc_grid(self):
@@ -658,6 +679,10 @@ class Warehouse(gym.Env):
 
         for a in self.agents:
             self.grid[_LAYER_AGENTS, a.y, a.x] = a.id
+
+        for w in self.walls:
+            self.grid[_LAYER_WALL, w[0], w[1]] = 1
+
 
     def reset(self):
         Shelf.counter = 0
@@ -675,7 +700,7 @@ class Warehouse(gym.Env):
                 np.indices(self.grid_size)[0].reshape(-1),
                 np.indices(self.grid_size)[1].reshape(-1),
             )
-            if not self._is_highway(x, y)
+            if (y,x) in self.shelfs_init_pos
         ]
 
         # spawn agents at random locations
@@ -683,6 +708,7 @@ class Warehouse(gym.Env):
             np.arange(self.grid_size[0] * self.grid_size[1]),
             size=self.n_agents,
             replace=False,
+            p=transform_Pwalls(self.walls, self.grid_size)
         )
         agent_locs = np.unravel_index(agent_locs, self.grid_size)
         # and direction
@@ -742,6 +768,10 @@ class Warehouse(gym.Env):
                 # there's a standing shelf at the target location
                 # our agent is carrying a shelf so there's no way
                 # this movement can succeed. Cancel it.
+                # and the target place is not wall
+                agent.req_action = Action.NOOP
+                G.add_edge(start, start)
+            elif self.grid[_LAYER_WALL, target[1], target[0]]:
                 agent.req_action = Action.NOOP
                 G.add_edge(start, start)
             else:
@@ -864,17 +894,31 @@ class Warehouse(gym.Env):
     
 
 if __name__ == "__main__":
-    env = Warehouse(9, 8, 3, 10, 3, 1, 5, None, None, RewardType.GLOBAL)
-    env.reset()
+    layout = """
+    .......
+    ...x...
+    ..xwx..
+    ..xwx..
+    ..xwx..
+    ...x...
+    .g...g.
+    """
+
+
+    env = Warehouse(9, 8, 3, 3, 3, 1, 5, None, None,RewardType.GLOBAL,layout,ObserationType.DICT)
+    obs = env.reset()
     import time
     from tqdm import tqdm
 
-    time.sleep(2)
+    #time.sleep(2)
     # env.render()
     # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
     for _ in tqdm(range(1000000)):
-        # time.sleep(2)
-        # env.render()
+        #time.sleep(1)
+        #print(env.walls)
+        env.render()
         actions = env.action_space.sample()
-        env.step(actions)
+        obs_, r, d, _ = env.step(actions)
+        obs = obs_
+        #env.reset()
