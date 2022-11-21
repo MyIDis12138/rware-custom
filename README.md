@@ -103,7 +103,7 @@ layout = """
 ...x...
 .g...g.
 """
-gym = env.make("rware:rware-tiny-2ag-v1", layout=layout)
+gym = env.make("rware:rware-tiny-3ag-v1", layout=layout)
 ```
 This will transform "X"s to shelves, "W" to walls and "G"s to goal locations with a result like the one below:
 <p align="center">
