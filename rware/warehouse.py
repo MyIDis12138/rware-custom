@@ -289,7 +289,7 @@ class Warehouse(gym.Env):
 
         self.renderer = None
 
-    def _make_layout_from_params(self, shelf_columns, shelf_rows, column_height):
+    def _make_layout_from_params(self, shelf_columns, shelf_rows, column_height, walls_pos:List[Tuple[int, int]]=[]):
         assert shelf_columns % 2 == 1, "Only odd number of shelf columns is supported"
 
         self.grid_size = (
@@ -303,16 +303,21 @@ class Warehouse(gym.Env):
             (self.grid_size[1] // 2, self.grid_size[0] - 1),
         ]
 
+        self.walls = walls_pos # (y,x) of walls
+
         self.highways = np.zeros(self.grid_size, dtype=np.int32)
 
         highway_func = lambda x, y: (
-            (x % 3 == 0)  # vertical highways
-            or (y % (self.column_height + 1) == 0)  # horizontal highways
-            or (y == self.grid_size[0] - 1)  # delivery row
-            or (  # remove a box for queuing
+            (
+                (x % 3 == 0)  # vertical highways
+                or (y % (self.column_height + 1) == 0)  # horizontal highways
+                or (y == self.grid_size[0] - 1)  # delivery row
+                or (  # remove a box for queuing
                 (y > self.grid_size[0] - (self.column_height + 3))
                 and ((x == self.grid_size[1] // 2 - 1) or (x == self.grid_size[1] // 2))
+                ) 
             )
+            and not (y,x) in self.walls 
         )
         for x in range(self.grid_size[1]):
             for y in range(self.grid_size[0]):
@@ -700,7 +705,7 @@ class Warehouse(gym.Env):
                 np.indices(self.grid_size)[0].reshape(-1),
                 np.indices(self.grid_size)[1].reshape(-1),
             )
-            if (y,x) in self.shelfs_init_pos
+            if (y,x) in self.shelfs_init_pos or (len(self.walls) ==0 and not self._is_highway(x,y))
         ]
 
         # spawn agents at random locations
@@ -905,7 +910,7 @@ if __name__ == "__main__":
     """
 
 
-    env = Warehouse(9, 8, 3, 3, 3, 1, 5, None, None,RewardType.GLOBAL,layout,ObserationType.DICT)
+    env = Warehouse(9, 8, 3, 3, 3, 1, 5, None, None, RewardType.GLOBAL, observation_type=ObserationType.DICT)
     obs = env.reset()
     import time
     from tqdm import tqdm
