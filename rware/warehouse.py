@@ -22,7 +22,7 @@ _COLLISION_LAYERS = 3
 
 _LAYER_AGENTS = 0
 _LAYER_SHELFS = 1
-_LAYER_WALL = 2
+_LAYER_WALLS= 2
 
 class _VectorWriter:
     def __init__(self, size: int):
@@ -76,6 +76,7 @@ class ImageLayer(Enum):
     AGENT_LOAD = 4 # binary layer indicating agents with load
     GOALS = 5 # binary layer indicating goal/ delivery locations
     ACCESSIBLE = 6 # binary layer indicating accessible cells (all but occupied cells/ out of map)
+    WALLS = 7 # binary layer indicating walls
 
 
 class Entity:
@@ -169,7 +170,8 @@ class Warehouse(gym.Env):
             ImageLayer.REQUESTS,
             ImageLayer.AGENTS,
             ImageLayer.GOALS,
-            ImageLayer.ACCESSIBLE
+            ImageLayer.ACCESSIBLE,
+            ImageLayer.WALLS
         ],
         image_observation_directional: bool=True,
         normalised_coordinates: bool=False,
@@ -440,11 +442,9 @@ class Warehouse(gym.Env):
                                                     "local_message": spaces.MultiBinary(
                                                         self.msg_bits
                                                     ),
-                                                    "has_wall": spaces.MultiBinary(1),
                                                     "has_shelf": spaces.MultiBinary(1),
-                                                    "shelf_requested": spaces.MultiBinary(
-                                                        1
-                                                    ),
+                                                    "shelf_requested": spaces.MultiBinary(1),
+                                                    "has_wall": spaces.MultiBinary(1),
                                                 }
                                             )
                                         ),
@@ -523,6 +523,10 @@ class Warehouse(gym.Env):
                         layer = np.ones(self.grid_size, dtype=np.float32)
                         for ag in self.agents:
                             layer[ag.y, ag.x] = 0.0
+                    elif layer_type == ImageLayer.WALLS:
+                        layer = self.grid[_LAYER_WALLS].copy().astype(np.float32)
+                        layer[layer > 0.0] = 1.0
+
                         # print("ACCESSIBLE LAYER")
                     # print(layer)
                     # print()
@@ -572,7 +576,7 @@ class Warehouse(gym.Env):
                 self.grid[_LAYER_SHELFS], self.sensor_range, mode="constant"
             )
             padded_walls = np.pad(
-                self.grid[_LAYER_WALL], self.sensor_range, mode='constant'
+                self.grid[_LAYER_WALLS], self.sensor_range, mode='constant'
             )
             # + self.sensor_range due to padding
             min_x += self.sensor_range
@@ -583,7 +587,7 @@ class Warehouse(gym.Env):
         else:
             padded_agents = self.grid[_LAYER_AGENTS]
             padded_shelfs = self.grid[_LAYER_SHELFS]
-            padded_walls = self.grid[_LAYER_WALL]
+            padded_walls = self.grid[_LAYER_WALLS]
 
         agents = padded_agents[min_y:max_y, min_x:max_x].reshape(-1)
         shelfs = padded_shelfs[min_y:max_y, min_x:max_x].reshape(-1)
@@ -606,24 +610,33 @@ class Warehouse(gym.Env):
             obs.write(direction)
             obs.write([int(self._is_highway(agent.x, agent.y))])
 
-            for i, (id_agent, id_shelf) in enumerate(zip(agents, shelfs)):
-                if id_agent == 0:
+            # bits length of a sensor: 1+4+msg_bits <- agents + 2 <- shelfs + 1 <- walls
+            for i, (id_agent, id_shelf, id_walls) in enumerate(zip(agents, shelfs, walls)):
+                if id_walls == 0:
+                    if id_agent == 0:
+                        obs.skip(1)
+                        obs.write([1.0])
+                        obs.skip(3 + self.msg_bits)
+                    else:
+                        obs.write([1.0])
+                        direction = np.zeros(4)
+                        direction[self.agents[id_agent - 1].dir.value] = 1.0
+                        obs.write(direction)
+                        if self.msg_bits > 0:
+                            obs.write(self.agents[id_agent - 1].message)
+                    if id_shelf == 0:
+                        obs.skip(2)
+                    else:
+                        obs.write(
+                            [1.0, int(self.shelfs[id_shelf - 1] in self.request_queue)]
+                        )
+                    obs.skip(1)
+                else:
                     obs.skip(1)
                     obs.write([1.0])
                     obs.skip(3 + self.msg_bits)
-                else:
-                    obs.write([1.0])
-                    direction = np.zeros(4)
-                    direction[self.agents[id_agent - 1].dir.value] = 1.0
-                    obs.write(direction)
-                    if self.msg_bits > 0:
-                        obs.write(self.agents[id_agent - 1].message)
-                if id_shelf == 0:
                     obs.skip(2)
-                else:
-                    obs.write(
-                        [1.0, int(self.shelfs[id_shelf - 1] in self.request_queue)]
-                    )
+                    obs.write([1.0])
 
             return obs.vector
  
@@ -685,7 +698,7 @@ class Warehouse(gym.Env):
             self.grid[_LAYER_AGENTS, a.y, a.x] = a.id
 
         for w in self.walls:
-            self.grid[_LAYER_WALL, w[0], w[1]] = 1
+            self.grid[_LAYER_WALLS, w[0], w[1]] = 1
 
 
     def reset(self):
@@ -775,7 +788,7 @@ class Warehouse(gym.Env):
                 # and the target place is not wall
                 agent.req_action = Action.NOOP
                 G.add_edge(start, start)
-            elif self.grid[_LAYER_WALL, target[1], target[0]]:
+            elif self.grid[_LAYER_WALLS, target[1], target[0]]:
                 agent.req_action = Action.NOOP
                 G.add_edge(start, start)
             else:

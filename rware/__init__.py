@@ -11,32 +11,34 @@ _sizes = {
 
 _difficulty = {"-easy": 2, "": 1, "-hard": 0.5}
 
-_perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20),)
 
-for size, diff, agents in _perms:
-    # normal tasks
-    gym.register(
-        id=f"rware-{size}-{agents}ag{diff}-v1",
-        entry_point="rware.warehouse:Warehouse",
-        kwargs={
-            "column_height": 8,
-            "shelf_rows": _sizes[size][0],
-            "shelf_columns": _sizes[size][1],
-            "n_agents": agents,
-            "msg_bits": 0,
-            "sensor_range": 1,
-            "request_queue_size": int(agents * _difficulty[diff]),
-            "max_inactivity_steps": None,
-            "max_steps": 500,
-            "reward_type": RewardType.INDIVIDUAL,
-        },
-    )
+def normal_registration():
+    _perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20),)
+
+    for size, diff, agents in _perms:
+        # normal tasks
+        gym.register(
+            id=f"rware-{size}-{agents}ag{diff}-v1",
+            entry_point="rware.warehouse:Warehouse",
+            kwargs={
+                "column_height": 8,
+                "shelf_rows": _sizes[size][0],
+                "shelf_columns": _sizes[size][1],
+                "n_agents": agents,
+                "msg_bits": 0,
+                "sensor_range": 1,
+                "request_queue_size": int(agents * _difficulty[diff]),
+                "max_inactivity_steps": None,
+                "max_steps": 500,
+                "reward_type": RewardType.INDIVIDUAL,
+            },
+        )
 
 
 def image_registration():
-    _observation_type = {"": ObserationType.FLATTENED, "-img": ObserationType.IMAGE}
+    _observation_type = {"": ObserationType.FLATTENED, "-img": ObserationType.IMAGE, "-dict": ObserationType.DICT}
     _image_directional = {"": True, "-Nd": False}
-    _perms = itertools.product(_sizes.keys(), _difficulty, _observation_type, _image_directional, range(1, 20),)
+    _perms = itertools.product(_sizes.keys(), _difficulty, _observation_type.keys(), _image_directional.keys(), range(1, 20),)
     for size, diff, obs_type, directional, agents in _perms:
         if obs_type == "" and directional == "":
             # already registered before
@@ -131,3 +133,6 @@ def full_registration():
                 "image_observation_directional": _image_directional[directional],
             },
         )
+
+normal_registration()
+image_registration()
