@@ -221,13 +221,15 @@ class Warehouse(gym.Env):
         :param sensor_range: Range of each agents observation
         :type sensor_range: int
         :param request_queue_size: How many shelfs are simultaneously requested
-        :type request_queue_size: intself.goals
+        :type request_queue_size: int self.goals
         :param max_inactivity: Number of steps without a delivered shelf until environment finishes
         :type max_inactivity: Optional[int]
         :param reward_type: Specifies if agents are rewarded individually or globally
         :type reward_type: RewardType
         :param layout: A string for a custom warehouse layout. X are shelve locations, dots are corridors, and g are the goal locations. Ignores shelf_columns, shelf_height and shelf_rows when used.
         :type layout: str
+        :param walls: A list of tuple inicates the locations of walls where agents unable to access
+        :type walls: List[Tuple[int, int]] 
         :param observation_type: Specifies type of observations
         :param image_observation_layers: Specifies types of layers observed if image-observations
             are used
