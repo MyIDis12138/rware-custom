@@ -439,9 +439,7 @@ class Warehouse(gym.Env):
                                                 {
                                                     "has_agent": spaces.MultiBinary(1),
                                                     "direction": spaces.Discrete(4),
-                                                    "local_message": spaces.MultiBinary(
-                                                        self.msg_bits
-                                                    ),
+                                                    "local_message": spaces.MultiBinary(self.msg_bits),
                                                     "has_shelf": spaces.MultiBinary(1),
                                                     "shelf_requested": spaces.MultiBinary(1),
                                                     "has_wall": spaces.MultiBinary(1),
@@ -610,7 +608,7 @@ class Warehouse(gym.Env):
             obs.write(direction)
             obs.write([int(self._is_highway(agent.x, agent.y))])
 
-            # bits length of a sensor: 1+4+msg_bits <- agents + 2 <- shelfs + 1 <- walls
+            # bits length of a sensor: 1+4+msg_bits <-agents + 2 <-shelfs + 1 <-walls
             for i, (id_agent, id_shelf, id_walls) in enumerate(zip(agents, shelfs, walls)):
                 if id_walls == 0:
                     if id_agent == 0:
