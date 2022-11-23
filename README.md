@@ -123,7 +123,7 @@ pip install rware
 
 If you prefer to have the code available and be able to edit it, you can use Git to download and install it:
 ```sh
-git clone git@github.com:uoe-agents/robotic-warehouse.git
+git clone git@github.com:MyIDis12138/rware_custom.git
 cd robotic-warehouse
 pip install -e .
 ```
