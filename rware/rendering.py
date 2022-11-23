@@ -214,7 +214,7 @@ class Viewer(object):
         batch = pyglet.graphics.Batch()
 
         for goal in env.goals:
-            y, x = goal
+            x, y = goal
             y = self.rows - y - 1  # pyglet rendering is reversed
             batch.add(
                 4,

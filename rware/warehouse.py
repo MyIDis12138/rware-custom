@@ -340,7 +340,7 @@ class Warehouse(gym.Env):
             for x, char in enumerate(line):
                 assert char.lower() in "gwx."
                 if char.lower() == "g":
-                    self.goals.append((y, x))
+                    self.goals.append((x, y))
                     self.highways[y, x] = 1
                 elif char.lower() == ".":
                     self.highways[y, x] = 1
@@ -898,32 +898,32 @@ class Warehouse(gym.Env):
         ...
     
 
-if __name__ == "__main__":
-    layout = """
-    .......
-    ...x...
-    ..xwx..
-    .x.w.x.
-    ..xwx..
-    ...x...
-    .g...g.
-    """
+# if __name__ == "__main__":
+#     layout = """
+#     .......
+#     ...x...
+#     ..xwx..
+#     .x.w.x.
+#     ..xwx..
+#     ...x...
+#     .g...g.
+#     """
 
 
-    env = Warehouse(9, 8, 3, 3, 3, 1, 5, None, None, RewardType.GLOBAL, observation_type=ObserationType.DICT)
-    obs = env.reset()
-    import time
-    from tqdm import tqdm
+#     env = Warehouse(9, 8, 3, 3, 3, 1, 5, None, None, RewardType.GLOBAL, layout,observation_type=ObserationType.FLATTENED)
+#     obs = env.reset()
+#     import time
+#     from tqdm import tqdm
 
-    #time.sleep(2)
-    # env.render()
-    # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
+#     #time.sleep(2)
+#     # env.render()
+#     # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
-    for _ in tqdm(range(1000000)):
-        #time.sleep(1)
-        #print(env.walls)
-        env.render()
-        actions = env.action_space.sample()
-        obs_, r, d, _ = env.step(actions)
-        obs = obs_
-        #env.reset()
+#     for _ in tqdm(range(1000000)):
+#         #time.sleep(1)
+#         #print(env.walls)
+#         env.render()
+#         actions = env.action_space.sample()
+#         obs_, r, d, _ = env.step(actions)
+#         obs = obs_
+#         #env.reset()
