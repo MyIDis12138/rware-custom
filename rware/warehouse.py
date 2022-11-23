@@ -162,6 +162,7 @@ class Warehouse(gym.Env):
         max_steps: Optional[int],
         reward_type: RewardType,
         layout: str = None,
+        walls: List[Tuple[int, int]] = [],
         observation_type: ObserationType=ObserationType.FLATTENED,
         image_observation_layers: List[ImageLayer]=[
             ImageLayer.SHELVES,
@@ -238,7 +239,7 @@ class Warehouse(gym.Env):
         """
 
         self.goals: List[Tuple[int, int]] = []
-        self.walls: List[Tuple[int, int]] = []
+        self.walls: List[Tuple[int, int]] = walls
         self.shelfs_init_pos: List[Tuple[int, int]] =[]
 
         if not layout:
@@ -289,7 +290,7 @@ class Warehouse(gym.Env):
 
         self.renderer = None
 
-    def _make_layout_from_params(self, shelf_columns, shelf_rows, column_height, walls_pos:List[Tuple[int, int]]=[]):
+    def _make_layout_from_params(self, shelf_columns, shelf_rows, column_height):
         assert shelf_columns % 2 == 1, "Only odd number of shelf columns is supported"
 
         self.grid_size = (
@@ -302,8 +303,6 @@ class Warehouse(gym.Env):
             (self.grid_size[1] // 2 - 1, self.grid_size[0] - 1),
             (self.grid_size[1] // 2, self.grid_size[0] - 1),
         ]
-
-        self.walls = walls_pos # (y,x) of walls
 
         self.highways = np.zeros(self.grid_size, dtype=np.int32)
 
@@ -705,7 +704,7 @@ class Warehouse(gym.Env):
                 np.indices(self.grid_size)[0].reshape(-1),
                 np.indices(self.grid_size)[1].reshape(-1),
             )
-            if (y,x) in self.shelfs_init_pos or (len(self.walls) ==0 and not self._is_highway(x,y))
+            if (y,x) in self.shelfs_init_pos or (len(self.walls) !=0 and not self._is_highway(x,y))
         ]
 
         # spawn agents at random locations
