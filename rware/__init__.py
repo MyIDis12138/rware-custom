@@ -8,6 +8,12 @@ _sizes = {
     "medium": (2, 5),
     "large": (3, 5),
 }
+_walls = {
+    "tiny": [(2,5),(3,5),(4,5),(5,5),(6,5),(7,5),(2,4),(3,4),(4,4),(5,4),(6,4),(7,4)],
+    "small": [(2, 3)],
+    "medium": [(2, 5)],
+    "large": [(3, 5)],
+}
 
 _difficulty = {"-easy": 2, "": 1, "-hard": 0.5}
 
@@ -31,6 +37,31 @@ def normal_registration():
                 "max_inactivity_steps": None,
                 "max_steps": 500,
                 "reward_type": RewardType.INDIVIDUAL,
+            },
+        )
+
+
+
+def walls_registration():
+    _perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20),)
+
+    for size, diff, agents in _perms:
+        # normal tasks
+        gym.register(
+            id=f"rware-{size}-{agents}ag{diff}-walls-v1",
+            entry_point="rware.warehouse:Warehouse",
+            kwargs={
+                "column_height": 8,
+                "shelf_rows": _sizes[size][0],
+                "shelf_columns": _sizes[size][1],
+                "n_agents": agents,
+                "msg_bits": 0,
+                "sensor_range": 1,
+                "request_queue_size": int(agents * _difficulty[diff]),
+                "max_inactivity_steps": None,
+                "max_steps": 500,
+                "reward_type": RewardType.INDIVIDUAL,
+                "walls": _walls[size]
             },
         )
 
@@ -135,4 +166,5 @@ def full_registration():
         )
 
 normal_registration()
-image_registration()
+walls_registration()
+#image_registration()
