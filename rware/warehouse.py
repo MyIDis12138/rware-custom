@@ -604,9 +604,18 @@ class Warehouse(gym.Env):
                 agent_x = agent.x
                 agent_y = agent.y
 
-            obs.write([agent_x, agent_y, int(agent.carrying_shelf is not None)])
+            x_location = np.zeros(self.grid_size[0])
+            x_location[agent_x] = 1
+            y_location = np.zeros(self.grid_size[1])
+            y_location[agent_y] = 1
+            carrying_shelf = np.zeros(2)
+            carrying_shelf[int(agent.carrying_shelf is not None)] = 1
+            #obs.write([agent_x, agent_y, int(agent.carrying_shelf is not None)])
             direction = np.zeros(4)
             direction[agent.dir.value] = 1.0
+            obs.write(x_location)
+            obs.write(y_location)
+            obs.write(carrying_shelf)
             obs.write(direction)
             obs.write([int(self._is_highway(agent.x, agent.y))])
 
@@ -910,32 +919,32 @@ class Warehouse(gym.Env):
         ...
     
 
-# if __name__ == "__main__":
-#     layout = """
-#     .......
-#     ...x...
-#     ..xwx..
-#     .x.w.x.
-#     ..xwx..
-#     ...x...
-#     .g...g.
-#     """
+if __name__ == "__main__":
+    layout = """
+    ........
+    ...x....
+    ..xwx...
+    .x.w.x..
+    ..xwx...
+    ...x....
+    .g...g..
+    """
 
 
-#     env = Warehouse(9, 8, 3, 3, 3, 1, 5, None, None, RewardType.GLOBAL, layout,observation_type=ObserationType.FLATTENED)
-#     obs = env.reset()
-#     import time
-#     from tqdm import tqdm
+    env = Warehouse(9, 8, 3, 3, 3, 1, 5, None, None, RewardType.GLOBAL, layout,observation_type=ObserationType.FLATTENED)
+    obs = env.reset()
+    import time
+    from tqdm import tqdm
 
-#     #time.sleep(2)
-#     # env.render()
-#     # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
+    #time.sleep(2)
+    # env.render()
+    # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
-#     for _ in tqdm(range(1000000)):
-#         #time.sleep(1)
-#         #print(env.walls)
-#         env.render()
-#         actions = env.action_space.sample()
-#         obs_, r, d, _ = env.step(actions)
-#         obs = obs_
-#         #env.reset()
+    for _ in tqdm(range(1000000)):
+        #time.sleep(1)
+        #print(env.walls)
+        env.render()
+        actions = env.action_space.sample()
+        obs_, r, d, _ = env.step(actions)
+        obs = obs_
+        #env.reset()
