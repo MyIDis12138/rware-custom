@@ -166,5 +166,5 @@ def full_registration():
         )
 
 normal_registration()
-walls_registration()
+#walls_registration()
 #image_registration()
