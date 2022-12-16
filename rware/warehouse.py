@@ -726,7 +726,7 @@ class Warehouse(gym.Env):
                 np.indices(self.grid_size)[0].reshape(-1),
                 np.indices(self.grid_size)[1].reshape(-1),
             )
-            if (y,x) in self.shelfs_init_pos or (len(self.walls) ==0 and not self._is_highway(x,y))
+            if (y,x) in self.shelfs_init_pos or ((y,x) not in self.walls and not self._is_highway(x,y))
         ]
 
         # spawn agents at random locations
