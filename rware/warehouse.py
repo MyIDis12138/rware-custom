@@ -726,7 +726,7 @@ class Warehouse(gym.Env):
                 np.indices(self.grid_size)[0].reshape(-1),
                 np.indices(self.grid_size)[1].reshape(-1),
             )
-            if (y,x) in self.shelfs_init_pos or ((y,x) not in self.walls and not self._is_highway(x,y))
+            if (y,x) in self.shelfs_init_pos or not ((y,x) in self.walls or self._is_highway(x,y))
         ]
 
         # spawn agents at random locations
@@ -751,9 +751,6 @@ class Warehouse(gym.Env):
         )
 
         return tuple([self._make_obs(agent) for agent in self.agents])
-        # for s in self.shelfs:
-        #     self.grid[0, s.y, s.x] = 1
-        # print(self.grid[0])
 
     def step(
         self, actions: List[Action]
