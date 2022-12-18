@@ -41,7 +41,6 @@ def normal_registration():
         )
 
 
-
 def walls_registration():
     _perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20),)
 

@@ -78,6 +78,13 @@ class ImageLayer(Enum):
     ACCESSIBLE = 6 # binary layer indicating accessible cells (all but occupied cells/ out of map)
     WALLS = 7 # binary layer indicating walls
 
+class Tasks(Enum):
+    """
+    Tasks shaped the rewards
+    """
+    ALL = 0
+    LEFT = 1
+    RIGHT = 2
 
 class Entity:
     def __init__(self, id_: int, x: int, y: int):
@@ -175,6 +182,7 @@ class Warehouse(gym.Env):
         ],
         image_observation_directional: bool=True,
         normalised_coordinates: bool=False,
+        Task:Tasks=Tasks.ALL #False for deliverying shelf on the left
     ):
         """The robotic warehouse environment
 
@@ -293,6 +301,7 @@ class Warehouse(gym.Env):
             self._use_fast_obs()
 
         self.renderer = None
+        self.task = Task
 
     def _make_layout_from_params(self, shelf_columns, shelf_rows, column_height):
         assert shelf_columns % 2 == 1, "Only odd number of shelf columns is supported"
@@ -426,10 +435,11 @@ class Warehouse(gym.Env):
                                 "self": spaces.Dict(
                                     OrderedDict(
                                         {
+                                            "agent_id": spaces.Discrete(self.n_agents),
                                             "location": location_space,
                                             "carrying_shelf": spaces.MultiDiscrete([2]),
                                             "direction": spaces.Discrete(4),
-                                            "on_highway": spaces.MultiBinary(1),
+                                            "on_highway": spaces.MultiBinary(1)
                                         }
                                     )
                                 ),
@@ -604,15 +614,20 @@ class Warehouse(gym.Env):
                 agent_x = agent.x
                 agent_y = agent.y
 
+            id_onehot = np.zeros(self.n_agents)
+            id_onehot[agent.id-1] = 1
+
             x_location = np.zeros(self.grid_size[1])
             x_location[agent_x] = 1
             y_location = np.zeros(self.grid_size[0])
             y_location[agent_y] = 1
+
             carrying_shelf = np.zeros(2)
             carrying_shelf[int(agent.carrying_shelf is not None)] = 1
             #obs.write([agent_x, agent_y, int(agent.carrying_shelf is not None)])
             direction = np.zeros(4)
             direction[agent.dir.value] = 1.0
+            obs.write(id_onehot)
             obs.write(x_location)
             obs.write(y_location)
             obs.write(carrying_shelf)
@@ -659,6 +674,7 @@ class Warehouse(gym.Env):
             agent_y = agent.y
         # --- self data
         obs["self"] = {
+            "agent_id": int(agent.id),
             "location": np.array([agent_x, agent_y]),
             "carrying_shelf": [int(agent.carrying_shelf is not None)],
             "direction": agent.dir.value,
@@ -916,32 +932,32 @@ class Warehouse(gym.Env):
         ...
     
 
-# if __name__ == "__main__":
-#     layout = """
-#     ........
-#     ...x....
-#     ..xwx...
-#     .x.w.x..
-#     ..xwx...
-#     ...x....
-#     .g...g..
-#     """
+if __name__ == "__main__":
+    layout = """
+    ........
+    ...x....
+    ..xwx...
+    .x.w.x..
+    ..xwx...
+    ...x....
+    .g...g..
+    """
 
 
-#     env = Warehouse(9, 8, 3, 3, 3, 1, 5, None, None, RewardType.GLOBAL, layout,observation_type=ObserationType.FLATTENED)
-#     obs = env.reset()
-#     import time
-#     from tqdm import tqdm
+    env = Warehouse(3, 8, 1, 3, 3, 1, 5, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED)
+    obs = env.reset()
+    import time
+    from tqdm import tqdm
 
-#     #time.sleep(2)
-#     # env.render()
-#     # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
+    #time.sleep(2)
+    # env.render()
+    # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
-#     for _ in tqdm(range(1000000)):
-#         #time.sleep(1)
-#         #print(env.walls)
-#         env.render()
-#         actions = env.action_space.sample()
-#         obs_, r, d, _ = env.step(actions)
-#         obs = obs_
-#         #env.reset()
+    for _ in tqdm(range(1000000)):
+        #time.sleep(1)
+        #print(env.walls)
+        env.render()
+        actions = env.action_space.sample()
+        obs_, r, d, _ = env.step(actions)
+        obs = obs_
+        #env.reset()
