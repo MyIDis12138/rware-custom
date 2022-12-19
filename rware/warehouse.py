@@ -944,7 +944,7 @@ if __name__ == "__main__":
     """
 
 
-    env = Warehouse(3, 8, 1, 3, 3, 1, 5, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED)
+    env = Warehouse(3, 8, 1, 3, 3, 1, 5, None, None, RewardType.GLOBAL,observation_type=ObserationType.DICT)
     obs = env.reset()
     import time
     from tqdm import tqdm
