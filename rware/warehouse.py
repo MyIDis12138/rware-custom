@@ -450,6 +450,7 @@ class Warehouse(gym.Env):
                                             OrderedDict(
                                                 {
                                                     "has_agent": spaces.MultiBinary(1),
+                                                    "agent_id": spaces.Discrete(self.n_agents),
                                                     "direction": spaces.Discrete(4),
                                                     "local_message": spaces.MultiBinary(self.msg_bits),
                                                     "has_shelf": spaces.MultiBinary(1),
@@ -636,13 +637,16 @@ class Warehouse(gym.Env):
 
             # bits length of a sensor: 1+4+msg_bits <-agents + 2 <-shelfs + 1 <-walls
             for i, (id_agent, id_shelf, id_walls) in enumerate(zip(agents, shelfs, walls)):
-                if id_walls == 0:
+                if id_walls == 0:                    
                     if id_agent == 0:
                         obs.skip(1)
-                        obs.write([1.0])
-                        obs.skip(3 + self.msg_bits)
+                        obs.skip(self.n_agents)
+                        obs.skip(4 + self.msg_bits)
                     else:
+                        id_onehot = np.zeros(self.n_agents)
+                        id_onehot[self.agents[id_agent - 1].id-1] = 1
                         obs.write([1.0])
+                        obs.write(id_onehot)
                         direction = np.zeros(4)
                         direction[self.agents[id_agent - 1].dir.value] = 1.0
                         obs.write(direction)
@@ -656,9 +660,8 @@ class Warehouse(gym.Env):
                         )
                     obs.skip(1)
                 else:
-                    obs.skip(1)
-                    obs.write([1.0])
-                    obs.skip(3 + self.msg_bits)
+                    obs.skip(1+self.n_agents)
+                    obs.skip(4 + self.msg_bits)
                     obs.skip(2)
                     obs.write([1.0])
 
@@ -687,10 +690,12 @@ class Warehouse(gym.Env):
         for i, id_ in enumerate(agents):
             if id_ == 0:
                 obs["sensors"][i]["has_agent"] = [0]
+                obs["sensors"][i]["agent_id"] = 0
                 obs["sensors"][i]["direction"] = 0
                 obs["sensors"][i]["local_message"] = self.msg_bits * [0]
             else:
                 obs["sensors"][i]["has_agent"] = [1]
+                obs["sensors"][i]["agent_id"] = self.agents[id_ - 1].id
                 obs["sensors"][i]["direction"] = self.agents[id_ - 1].dir.value
                 obs["sensors"][i]["local_message"] = self.agents[id_ - 1].message
 
@@ -944,7 +949,7 @@ if __name__ == "__main__":
     """
 
 
-    env = Warehouse(3, 8, 1, 3, 3, 1, 5, None, None, RewardType.GLOBAL,observation_type=ObserationType.DICT)
+    env = Warehouse(3, 8, 1, 3, 3, 1, 5, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED)
     obs = env.reset()
     import time
     from tqdm import tqdm
