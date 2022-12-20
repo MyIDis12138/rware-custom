@@ -435,7 +435,6 @@ class Warehouse(gym.Env):
                                 "self": spaces.Dict(
                                     OrderedDict(
                                         {
-                                            "agent_id": spaces.Discrete(self.n_agents),
                                             "location": location_space,
                                             "carrying_shelf": spaces.MultiDiscrete([2]),
                                             "direction": spaces.Discrete(4),
@@ -614,9 +613,6 @@ class Warehouse(gym.Env):
                 agent_x = agent.x
                 agent_y = agent.y
 
-            id_onehot = np.zeros(self.n_agents)
-            id_onehot[agent.id-1] = 1
-
             x_location = np.zeros(self.grid_size[1])
             x_location[agent_x] = 1
             y_location = np.zeros(self.grid_size[0])
@@ -627,7 +623,6 @@ class Warehouse(gym.Env):
             #obs.write([agent_x, agent_y, int(agent.carrying_shelf is not None)])
             direction = np.zeros(4)
             direction[agent.dir.value] = 1.0
-            obs.write(id_onehot)
             obs.write(x_location)
             obs.write(y_location)
             obs.write(carrying_shelf)
@@ -674,7 +669,6 @@ class Warehouse(gym.Env):
             agent_y = agent.y
         # --- self data
         obs["self"] = {
-            "agent_id": int(agent.id),
             "location": np.array([agent_x, agent_y]),
             "carrying_shelf": [int(agent.carrying_shelf is not None)],
             "direction": agent.dir.value,
@@ -932,32 +926,32 @@ class Warehouse(gym.Env):
         ...
     
 
-if __name__ == "__main__":
-    layout = """
-    ........
-    ...x....
-    ..xwx...
-    .x.w.x..
-    ..xwx...
-    ...x....
-    .g...g..
-    """
+# if __name__ == "__main__":
+#     layout = """
+#     ........
+#     ...x....
+#     ..xwx...
+#     .x.w.x..
+#     ..xwx...
+#     ...x....
+#     .g...g..
+#     """
 
 
-    env = Warehouse(3, 8, 1, 3, 3, 1, 5, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED)
-    obs = env.reset()
-    import time
-    from tqdm import tqdm
+#     env = Warehouse(3, 8, 1, 3, 3, 1, 5, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED)
+#     obs = env.reset()
+#     import time
+#     from tqdm import tqdm
 
-    #time.sleep(2)
-    # env.render()
-    # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
+#     #time.sleep(2)
+#     # env.render()
+#     # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
-    for _ in tqdm(range(1000000)):
-        #time.sleep(1)
-        #print(env.walls)
-        env.render()
-        actions = env.action_space.sample()
-        obs_, r, d, _ = env.step(actions)
-        obs = obs_
-        #env.reset()
+#     for _ in tqdm(range(1000000)):
+#         #time.sleep(1)
+#         #print(env.walls)
+#         env.render()
+#         actions = env.action_space.sample()
+#         obs_, r, d, _ = env.step(actions)
+#         obs = obs_
+#         #env.reset()
