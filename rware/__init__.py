@@ -20,12 +20,12 @@ _difficulty = {"-easy": 2, "": 1, "-hard": 0.5}
 _tasks = {"-left": Tasks.LEFT, "-right":Tasks.RIGHT, "":Tasks.ALL}
 
 def normal_registration():
-    _perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20),)
+    _perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20), _tasks,)
 
-    for size, diff, agents in _perms:
+    for size, diff, agents, task in _perms:
         # normal tasks
         gym.register(
-            id=f"rware-{size}-{agents}ag{diff}-v1",
+            id=f"rware-{size}-{agents}ag{diff}{task}-v1",
             entry_point="rware.warehouse:Warehouse",
             kwargs={
                 "column_height": 8,
@@ -38,15 +38,15 @@ def normal_registration():
                 "max_inactivity_steps": None,
                 "max_steps": 500,
                 "reward_type": RewardType.INDIVIDUAL,
-                "task": _tasks
+                "task": _tasks[task]
             },
         )
 
 
 def walls_registration():
-    _perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20),)
+    _perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20), _tasks,)
 
-    for size, diff, agents in _perms:
+    for size, diff, agents, task in _perms:
         # normal tasks
         gym.register(
             id=f"rware-{size}-{agents}ag{diff}-walls-v1",
@@ -63,7 +63,7 @@ def walls_registration():
                 "max_steps": 500,
                 "reward_type": RewardType.INDIVIDUAL,
                 "walls": _walls[size],
-                "task": _tasks
+                "task": _tasks[task]
             },
         )
 
