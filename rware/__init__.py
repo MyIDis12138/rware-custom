@@ -1,5 +1,5 @@
 import gym
-from .warehouse import Warehouse, RewardType, Action, ObserationType
+from .warehouse import Warehouse, RewardType, Action, ObserationType, Tasks
 import itertools
 
 _sizes = {
@@ -17,6 +17,7 @@ _walls = {
 
 _difficulty = {"-easy": 2, "": 1, "-hard": 0.5}
 
+_tasks = {"-left": Tasks.LEFT, "-right":Tasks.RIGHT, "":Tasks.ALL}
 
 def normal_registration():
     _perms = itertools.product(_sizes.keys(), _difficulty, range(1, 20),)
@@ -37,6 +38,7 @@ def normal_registration():
                 "max_inactivity_steps": None,
                 "max_steps": 500,
                 "reward_type": RewardType.INDIVIDUAL,
+                "task": _tasks
             },
         )
 
@@ -60,7 +62,8 @@ def walls_registration():
                 "max_inactivity_steps": None,
                 "max_steps": 500,
                 "reward_type": RewardType.INDIVIDUAL,
-                "walls": _walls[size]
+                "walls": _walls[size],
+                "task": _tasks
             },
         )
 

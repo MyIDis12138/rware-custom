@@ -183,7 +183,7 @@ class Warehouse(gym.Env):
         ],
         image_observation_directional: bool=True,
         normalised_coordinates: bool=False,
-        Task:Tasks=Tasks.ALL #False for deliverying shelf on the left
+        task:Tasks=Tasks.ALL #False for deliverying shelf on the left
     ):
         """The robotic warehouse environment
 
@@ -302,7 +302,7 @@ class Warehouse(gym.Env):
             self._use_fast_obs()
 
         self.renderer = None
-        self.task = Task
+        self.task = task
 
     def _make_layout_from_params(self, shelf_columns, shelf_rows, column_height):
         assert shelf_columns % 2 == 1, "Only odd number of shelf columns is supported"
@@ -941,32 +941,32 @@ class Warehouse(gym.Env):
         ...
     
 
-if __name__ == "__main__":
-    layout = """
-    ........
-    ...x....
-    ..xwx...
-    .x.w.x..
-    ..xwx...
-    ...x....
-    .g...g..
-    """
+# if __name__ == "__main__":
+#     layout = """
+#     ........
+#     ...x....
+#     ..xwx...
+#     .x.w.x..
+#     ..xwx...
+#     ...x....
+#     .g...g..
+#     """
 
 
-    env = Warehouse(3, 8, 1, 4, 0, 1, 8, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED,Task=Tasks.LEFT)
-    obs = env.reset()
-    import time
-    from tqdm import tqdm
+#     env = Warehouse(3, 8, 1, 4, 0, 1, 8, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED,Task=Tasks.LEFT)
+#     obs = env.reset()
+#     import time
+#     from tqdm import tqdm
 
-    #time.sleep(2)
-    # env.render()
-    # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
+#     #time.sleep(2)
+#     # env.render()
+#     # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
-    for _ in tqdm(range(1000000)):
-        #time.sleep(1)
-        #print(env.walls)
-        #env.render()
-        actions = env.action_space.sample()
-        obs_, r, d, _ = env.step(actions)
-        obs = obs_
-        #env.reset()
+#     for _ in tqdm(range(1000000)):
+#         #time.sleep(1)
+#         #print(env.walls)
+#         #env.render()
+#         actions = env.action_space.sample()
+#         obs_, r, d, _ = env.step(actions)
+#         obs = obs_
+#         #env.reset()
