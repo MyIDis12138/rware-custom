@@ -86,6 +86,7 @@ class Tasks(Enum):
     LEFT = 1
     RIGHT = 2
 
+
 class Entity:
     def __init__(self, id_: int, x: int, y: int):
         self.id = id_
@@ -719,6 +720,17 @@ class Warehouse(gym.Env):
         for w in self.walls:
             self.grid[_LAYER_WALLS, w[0], w[1]] = 1
 
+    def _get_rwards(self, shelf_id):
+        if self.task == Tasks.ALL:
+            return 1.0
+        if self.task == Tasks.LEFT and (shelf_id-1)%4<2:
+            return 1.0
+        if self.task == Tasks.RIGHT and (shelf_id-1)%4>=2:
+            return 1.0
+        return 0.0
+
+
+
 
     def reset(self):
         Shelf.counter = 0
@@ -860,7 +872,7 @@ class Warehouse(gym.Env):
                 if not self._is_highway(agent.x, agent.y):
                     agent.carrying_shelf = None
                     if agent.has_delivered and self.reward_type == RewardType.TWO_STAGE:
-                        rewards[agent.id - 1] += 0.5
+                        rewards[agent.id - 1] += self._get_rwards(shelf_id)*0.5
 
                     agent.has_delivered = False
 
@@ -884,14 +896,17 @@ class Warehouse(gym.Env):
             self.request_queue[self.request_queue.index(shelf)] = new_request
             # also reward the agents
             if self.reward_type == RewardType.GLOBAL:
-                rewards += 1
+                rewards += self._get_rwards(shelf_id)
             elif self.reward_type == RewardType.INDIVIDUAL:
                 agent_id = self.grid[_LAYER_AGENTS, x, y]
-                rewards[agent_id - 1] += 1
+                rewards[agent_id - 1] += self._get_rwards(shelf_id)
             elif self.reward_type == RewardType.TWO_STAGE:
                 agent_id = self.grid[_LAYER_AGENTS, x, y]
                 self.agents[agent_id - 1].has_delivered = True
-                rewards[agent_id - 1] += 0.5
+                rewards[agent_id - 1] += self._get_rwards(shelf_id)*0.5
+
+            if list(rewards)[0] >= 1.0:
+                print("stop here")
 
         if shelf_delivered:
             self._cur_inactive_steps = 0
@@ -926,32 +941,32 @@ class Warehouse(gym.Env):
         ...
     
 
-# if __name__ == "__main__":
-#     layout = """
-#     ........
-#     ...x....
-#     ..xwx...
-#     .x.w.x..
-#     ..xwx...
-#     ...x....
-#     .g...g..
-#     """
+if __name__ == "__main__":
+    layout = """
+    ........
+    ...x....
+    ..xwx...
+    .x.w.x..
+    ..xwx...
+    ...x....
+    .g...g..
+    """
 
 
-#     env = Warehouse(3, 8, 1, 3, 3, 1, 5, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED)
-#     obs = env.reset()
-#     import time
-#     from tqdm import tqdm
+    env = Warehouse(3, 8, 1, 4, 0, 1, 8, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED,Task=Tasks.LEFT)
+    obs = env.reset()
+    import time
+    from tqdm import tqdm
 
-#     #time.sleep(2)
-#     # env.render()
-#     # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
+    #time.sleep(2)
+    # env.render()
+    # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
-#     for _ in tqdm(range(1000000)):
-#         #time.sleep(1)
-#         #print(env.walls)
-#         env.render()
-#         actions = env.action_space.sample()
-#         obs_, r, d, _ = env.step(actions)
-#         obs = obs_
-#         #env.reset()
+    for _ in tqdm(range(1000000)):
+        #time.sleep(1)
+        #print(env.walls)
+        #env.render()
+        actions = env.action_space.sample()
+        obs_, r, d, _ = env.step(actions)
+        obs = obs_
+        #env.reset()
