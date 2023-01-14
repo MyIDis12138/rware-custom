@@ -619,14 +619,12 @@ class Warehouse(gym.Env):
             y_location = np.zeros(self.grid_size[0])
             y_location[agent_y] = 1
 
-            carrying_shelf = np.zeros(2)
-            carrying_shelf[int(agent.carrying_shelf is not None)] = 1
             #obs.write([agent_x, agent_y, int(agent.carrying_shelf is not None)])
             direction = np.zeros(4)
             direction[agent.dir.value] = 1.0
             obs.write(x_location)
             obs.write(y_location)
-            obs.write(carrying_shelf)
+            obs.write([int(agent.carrying_shelf is not None)])
             obs.write(direction)
             obs.write([int(self._is_highway(agent.x, agent.y))])
 
@@ -905,8 +903,8 @@ class Warehouse(gym.Env):
                 self.agents[agent_id - 1].has_delivered = True
                 rewards[agent_id - 1] += self._get_rwards(shelf_id)*0.5
 
-            if list(rewards)[0] >= 1.0:
-                print("stop here")
+            #if list(rewards)[0] >= 1.0:
+            #    print("stop here")
 
         if shelf_delivered:
             self._cur_inactive_steps = 0
