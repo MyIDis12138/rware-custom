@@ -490,6 +490,226 @@ class Warehouse(gym.Env):
     def _is_highway(self, x: int, y: int) -> bool:
         return self.highways[y, x]
 
+    def _test_obs(self,agent):
+        if self.image_obs:
+            # write image observations
+            if agent.id == 1:
+                layers = []
+                # first agent's observation --> update global observation layers
+                for layer_type in self.image_observation_layers:
+                    if layer_type == ImageLayer.SHELVES:
+                        layer = self.grid[_LAYER_SHELFS].copy().astype(np.float32)
+                        # set all occupied shelf cells to 1.0 (instead of shelf ID)
+                        layer[layer > 0.0] = 1.0
+                        # print("SHELVES LAYER")
+                    elif layer_type == ImageLayer.REQUESTS:
+                        layer = np.zeros(self.grid_size, dtype=np.float32)
+                        for requested_shelf in self.request_queue:
+                            layer[requested_shelf.y, requested_shelf.x] = 1.0
+                        # print("REQUESTS LAYER")
+                    elif layer_type == ImageLayer.AGENTS:
+                        layer = self.grid[_LAYER_AGENTS].copy().astype(np.float32)
+                        # set all occupied agent cells to 1.0 (instead of agent ID)
+                        layer[layer > 0.0] = 1.0
+                        # print("AGENTS LAYER")
+                    elif layer_type == ImageLayer.AGENT_DIRECTION:
+                        layer = np.zeros(self.grid_size, dtype=np.float32)
+                        for ag in self.agents:
+                            agent_direction = ag.dir.value + 1
+                            layer[ag.x, ag.y] = float(agent_direction)
+                        # print("AGENT DIRECTIONS LAYER")
+                    elif layer_type == ImageLayer.AGENT_LOAD:
+                        layer = np.zeros(self.grid_size, dtype=np.float32)
+                        for ag in self.agents:
+                            if ag.carrying_shelf is not None:
+                                layer[ag.x, ag.y] = 1.0
+                        # print("AGENT LOAD LAYER")
+                    elif layer_type == ImageLayer.GOALS:
+                        layer = np.zeros(self.grid_size, dtype=np.float32)
+                        for goal_y, goal_x in self.goals:
+                            layer[goal_x, goal_y] = 1.0
+                        # print("GOALS LAYER")
+                    elif layer_type == ImageLayer.ACCESSIBLE:
+                        layer = np.ones(self.grid_size, dtype=np.float32)
+                        for ag in self.agents:
+                            layer[ag.y, ag.x] = 0.0
+                    elif layer_type == ImageLayer.WALLS:
+                        layer = self.grid[_LAYER_WALLS].copy().astype(np.float32)
+                        layer[layer > 0.0] = 1.0
+
+                        # print("ACCESSIBLE LAYER")
+                    # print(layer)
+                    # print()
+                    # pad with 0s for out-of-map cells
+                    layer = np.pad(layer, self.sensor_range, mode="constant")
+                    layers.append(layer)
+                self.global_layers = np.stack(layers)
+
+            # global information was generated --> get information for agent
+            start_x = agent.y
+            end_x = agent.y + 2 * self.sensor_range + 1
+            start_y = agent.x
+            end_y = agent.x + 2 * self.sensor_range + 1
+            obs = self.global_layers[:, start_x:end_x, start_y:end_y]
+
+            if self.image_observation_directional:
+                # rotate image to be in direction of agent
+                if agent.dir == Direction.DOWN:
+                    # rotate by 180 degrees (clockwise)
+                    obs = np.rot90(obs, k=2, axes=(1,2))
+                elif agent.dir == Direction.LEFT:
+                    # rotate by 90 degrees (clockwise)
+                    obs = np.rot90(obs, k=3, axes=(1,2))
+                elif agent.dir == Direction.RIGHT:
+                    # rotate by 270 degrees (clockwise)
+                    obs = np.rot90(obs, k=1, axes=(1,2))
+                # no rotation needed for UP direction
+            return obs
+
+        min_x = agent.x - self.sensor_range
+        max_x = agent.x + self.sensor_range + 1
+
+        min_y = agent.y - self.sensor_range
+        max_y = agent.y + self.sensor_range + 1
+
+        # sensors
+        if (
+            (min_x < 0)
+            or (min_y < 0)
+            or (max_x > self.grid_size[1])
+            or (max_y > self.grid_size[0])
+        ):
+            padded_agents = np.pad(
+                self.grid[_LAYER_AGENTS], self.sensor_range, mode="constant"
+            )
+            padded_shelfs = np.pad(
+                self.grid[_LAYER_SHELFS], self.sensor_range, mode="constant"
+            )
+            padded_walls = np.pad(
+                self.grid[_LAYER_WALLS], self.sensor_range, mode='constant'
+            )
+            # + self.sensor_range due to padding
+            min_x += self.sensor_range
+            max_x += self.sensor_range
+            min_y += self.sensor_range
+            max_y += self.sensor_range
+
+        else:
+            padded_agents = self.grid[_LAYER_AGENTS]
+            padded_shelfs = self.grid[_LAYER_SHELFS]
+            padded_walls = self.grid[_LAYER_WALLS]
+
+        agents = padded_agents[min_y:max_y, min_x:max_x].reshape(-1)
+        shelfs = padded_shelfs[min_y:max_y, min_x:max_x].reshape(-1)
+        walls = padded_walls[min_y:max_y, min_x:max_x].reshape(-1)
+
+        if self.fast_obs:
+            # write flattened observations
+            obs = _VectorWriter(self.observation_space[agent.id - 1].shape[0])
+
+            if self.normalised_coordinates:
+                agent_x = agent.x / (self.grid_size[1] - 1)
+                agent_y = agent.y / (self.grid_size[0] - 1)
+            else:
+                agent_x = agent.x
+                agent_y = agent.y
+
+            x_location = np.zeros(self.grid_size[1])
+            x_location[agent_x] = 1
+            y_location = np.zeros(self.grid_size[0])
+            y_location[agent_y] = 1
+
+            #obs.write([agent_x, agent_y, int(agent.carrying_shelf is not None)])
+            direction = np.zeros(4)
+            direction[agent.dir.value] = 1.0
+            obs.write(x_location)
+            obs.write(y_location)
+            obs.write([int(agent.carrying_shelf is not None)])
+            obs.write(direction)
+            obs.write([int(self._is_highway(agent.x, agent.y))])
+
+            request_queue = np.zeros(9)
+
+            # bits length of a sensor: 1+4+msg_bits <-agents + 2 <-shelfs + 1 <-walls
+            for i, (id_agent, id_shelf, id_walls) in enumerate(zip(agents, shelfs, walls)):
+                if id_walls == 0:
+                    if id_agent == 0:
+                        obs.skip(1)
+                        obs.write([1.0])
+                        obs.skip(3 + self.msg_bits)
+                    else:
+                        obs.write([1.0])
+                        direction = np.zeros(4)
+                        direction[self.agents[id_agent - 1].dir.value] = 1.0
+                        obs.write(direction)
+                        if self.msg_bits > 0:
+                            obs.write(self.agents[id_agent - 1].message)
+                    if id_shelf == 0:
+                        obs.skip(1)
+                    else:
+                        obs.write([1.0])
+                        if self.shelfs[id_shelf - 1] in self.request_queue: 
+                            request_queue[i] = 1.0
+                    obs.skip(1)
+                else:
+                    obs.skip(1)
+                    obs.write([1.0])
+                    obs.skip(3 + self.msg_bits)
+                    obs.skip(1)
+                    obs.write([1.0])
+            obs.write(request_queue)
+
+            return obs.vector
+ 
+        # write dictionary observations
+        obs = {}
+        if self.normalised_coordinates:
+            agent_x = agent.x / (self.grid_size[1] - 1)
+            agent_y = agent.y / (self.grid_size[0] - 1)
+        else:
+            agent_x = agent.x
+            agent_y = agent.y
+        # --- self data
+        obs["self"] = {
+            "location": np.array([agent_x, agent_y]),
+            "carrying_shelf": [int(agent.carrying_shelf is not None)],
+            "direction": agent.dir.value,
+            "on_highway": [int(self._is_highway(agent.x, agent.y))],
+        }
+        # --- sensor data
+        obs["sensors"] = tuple({} for _ in range(self._obs_sensor_locations))
+
+        # find neighboring agents
+        for i, id_ in enumerate(agents):
+            if id_ == 0:
+                obs["sensors"][i]["has_agent"] = [0]
+                obs["sensors"][i]["direction"] = 0
+                obs["sensors"][i]["local_message"] = self.msg_bits * [0]
+            else:
+                obs["sensors"][i]["has_agent"] = [1]
+                obs["sensors"][i]["direction"] = self.agents[id_ - 1].dir.value
+                obs["sensors"][i]["local_message"] = self.agents[id_ - 1].message
+
+        # find neighboring shelfs:
+        for i, id_ in enumerate(shelfs):
+            if id_ == 0:
+                obs["sensors"][i]["has_shelf"] = [0]
+                obs["sensors"][i]["shelf_requested"] = [0]
+            else:
+                obs["sensors"][i]["has_shelf"] = [1]
+                obs["sensors"][i]["shelf_requested"] = [
+                    int(self.shelfs[id_ - 1] in self.request_queue)
+                ]
+
+        # find neighboring walls:
+        for i, id_ in enumerate(walls):
+            if id_ == 0:
+                obs["sensors"][i]["has_wall"] = [0]
+            else:
+                obs["sensors"][i]["has_wall"] = [1]
+
+        return obs
+
     def _make_obs(self, agent):
         if self.image_obs:
             # write image observations
@@ -770,7 +990,7 @@ class Warehouse(gym.Env):
             np.random.choice(self.shelfs, size=self.request_queue_size, replace=False)
         )
 
-        return tuple([self._make_obs(agent) for agent in self.agents])
+        return tuple([self._test_obs(agent) for agent in self.agents])
 
     def step(
         self, actions: List[Action]
@@ -920,7 +1140,7 @@ class Warehouse(gym.Env):
         else:
             dones = self.n_agents * [False]
 
-        new_obs = tuple([self._make_obs(agent) for agent in self.agents])
+        new_obs = tuple([self._test_obs(agent) for agent in self.agents])
         info = {}
         return new_obs, list(rewards), dones, info
 
