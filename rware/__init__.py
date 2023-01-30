@@ -49,7 +49,7 @@ def walls_registration():
     for size, diff, agents, task in _perms:
         # normal tasks
         gym.register(
-            id=f"rware-{size}-{agents}ag{diff}-walls-v1",
+            id=f"rware-{size}-{agents}ag{diff}{task}-walls-v1",
             entry_point="rware.warehouse:Warehouse",
             kwargs={
                 "column_height": 8,
