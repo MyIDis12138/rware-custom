@@ -1159,32 +1159,32 @@ class Warehouse(gym.Env):
         ...
     
 
-# if __name__ == "__main__":
-#     layout = """
-#     ........
-#     ...x....
-#     ..xwx...
-#     .x.w.x..
-#     ..xwx...
-#     ...x....
-#     .g...g..
-#     """
+if __name__ == "__main__":
+    layout = """
+    ........
+    ...x....
+    ..xwx...
+    .x.w.x..
+    ..xwx...
+    ...x....
+    .g...g..
+    """
 
 
-#     env = Warehouse(3, 8, 1, 4, 0, 1, 8, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED,Task=Tasks.LEFT)
-#     obs = env.reset()
-#     import time
-#     from tqdm import tqdm
+    env = Warehouse(3, 8, 1, 4, 0, 1, 8, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED,task=Tasks.LEFT)
+    obs = env.reset()
+    import time
+    from tqdm import tqdm
 
-#     #time.sleep(2)
-#     # env.render()
-#     # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
+    #time.sleep(2)
+    # env.render()
+    # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
-#     for _ in tqdm(range(1000000)):
-#         #time.sleep(1)
-#         #print(env.walls)
-#         #env.render()
-#         actions = env.action_space.sample()
-#         obs_, r, d, _ = env.step(actions)
-#         obs = obs_
-#         #env.reset()
+    for _ in tqdm(range(1000000)):
+        #time.sleep(1)
+        #print(env.walls)
+        env.render()
+        actions = env.action_space.sample()
+        obs_, r, d, _ = env.step(actions)
+        obs = obs_
+        #env.reset()
