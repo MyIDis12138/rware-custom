@@ -1171,7 +1171,7 @@ class Warehouse(gym.Env):
 #     """
 
 
-#     env = Warehouse(3, 8, 1, 4, 0, 1, 8, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED,Task=Tasks.LEFT)
+#     env = Warehouse(3, 8, 1, 4, 0, 1, 8, None, None, RewardType.GLOBAL,observation_type=ObserationType.FLATTENED,task=Tasks.LEFT)
 #     obs = env.reset()
 #     import time
 #     from tqdm import tqdm
