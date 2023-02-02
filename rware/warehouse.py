@@ -628,8 +628,8 @@ class Warehouse(gym.Env):
             obs.write(direction)
             obs.write([int(self._is_highway(agent.x, agent.y))])
             # bits length of a sensor: 1+4+msg_bits <-agents + 2 <-shelfs + 1 <-walls
+            request_queue = np.zeros(9)
             for i, (id_agent, id_shelf, id_walls) in enumerate(zip(agents, shelfs, walls)):
-                request_queue = np.zeros(9)
                 if id_walls == 0:
                     if id_agent == 0:
                         obs.skip(1)
